@@ -1,4 +1,3 @@
-// pages/ManagePastors.jsx
 import RequireAuth from '../components/RequireAuth'
 import LogoutButton from '../components/LogoutButton'
 import { useAuth } from '../context/AuthContext'
@@ -6,6 +5,7 @@ import UsersTable from '../components/UsersTable'
 import UserForm from '../components/UserForm'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import './ManagePastors.css'
 
 export default function ManagePastors() {
   const { profile, session } = useAuth()
@@ -14,34 +14,41 @@ export default function ManagePastors() {
 
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-gray-100 p-6">
-        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow p-6">
-          <div className="flex items-center justify-between mb-6">
+      <div className="mp-page">
+        <div className="mp-container">
+          <header className="mp-header">
             <div>
-              <h1 className="text-2xl font-semibold">Gestionar Pastores</h1>
-              <p className="text-sm text-gray-600">Hola, {displayName}</p>
+              <h1 className="mp-title">Gestionar Pastores</h1>
+              <p className="mp-subtitle">Hola, <strong>{displayName}</strong></p>
             </div>
-            <div className="flex items-center gap-2">
-              <Link to="/dashboard" className="px-3 py-2 rounded bg-gray-200">Dashboard</Link>
+            <div className="mp-actions">
+              <Link to="/dashboard" className="btn btn-secondary">Dashboard</Link>
               <LogoutButton />
             </div>
-          </div>
+          </header>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h2 className="font-semibold mb-3">Crear Pastor</h2>
+          <section className="mp-grid">
+            <div className="card">
+              <h2 className="card-title">Crear Pastor</h2>
               <UserForm
                 defaultRole="pastor"
                 onCreated={() => setRefreshKey(x => x + 1)}
               />
             </div>
 
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h2 className="font-semibold mb-3">Pastores</h2>
+            <div className="card">
+              <div className="card-title-row">
+                <h2 className="card-title">Pastores</h2>
+              </div>
               <UsersTable role="pastor" refreshKey={refreshKey} />
             </div>
-          </div>
+          </section>
         </div>
+
+        {/* Fondo decorativo */}
+        <div className="mp-bubble b1" />
+        <div className="mp-bubble b2" />
+        <div className="mp-bubble b3" />
       </div>
     </RequireAuth>
   )

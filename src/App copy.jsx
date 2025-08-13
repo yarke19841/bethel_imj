@@ -12,7 +12,6 @@ import ManageTerritories from './pages/ManageTerritories'
 import LeaderHome from './pages/LeaderHome'
 import StaffDashboard from './pages/StaffDashboard' // úsalo para pastores
 import Login from './pages/Login'
-
 import { Toaster } from 'sonner'
 
 import { RequireAuth, AdminOnly, RoleSwitch } from './components/RouteGuards'
@@ -25,7 +24,6 @@ const router = createHashRouter([
   // Login público
   { path: '/login', element: <Login /> },
 
- 
   // RoleSwitch decide a dónde ir (leader/staff/admin)
   { path: '/dashboard', element: <RequireAuth><RoleSwitch /></RequireAuth> },
 

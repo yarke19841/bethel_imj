@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { createUserAdmin } from '../services/adminApi'
 
-export default function UserForm({ defaultRole, onCreated }) {
+function getTerritoryInitials(name = '') {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map(w => (w[0] || '').toUpperCase())
+    .join('')
+}
+
+export default function UserForm({ defaultRole = 'leader', onCreated }) {
   const [full_name, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -11,12 +19,13 @@ export default function UserForm({ defaultRole, onCreated }) {
   const [territories, setTerritories] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
 
   useEffect(() => {
     ;(async () => {
       const { data, error } = await supabase
-        .from('territories')           // cambia a 'Territories' si tu tabla está con mayúscula
-        .select('id, name')            // cambia 'name' por 'nombre' si aplica
+        .from('territories')
+        .select('id, name')
         .order('name', { ascending: true })
 
       if (error) {
@@ -28,26 +37,64 @@ export default function UserForm({ defaultRole, onCreated }) {
     })()
   }, [])
 
+  // Datos derivados para autogenerar nombre de grupo
+  const selectedTerritory = useMemo(
+    () => territories.find(t => t.id === Number(territory_id)) || null,
+    [territory_id, territories]
+  )
+  const territoryInitials = useMemo(
+    () => (selectedTerritory ? getTerritoryInitials(selectedTerritory.name) : ''),
+    [selectedTerritory]
+  )
+  const leaderFirstName = useMemo(
+    () => (full_name.trim() ? full_name.trim().split(/\s+/)[0] : ''),
+    [full_name]
+  )
+
+  // Nombre del grupo autogenerado (no editable)
+  const group_name = useMemo(() => {
+    if (defaultRole !== 'leader') return ''
+    if (!territoryInitials || !leaderFirstName) return ''
+    return `GE-${territoryInitials}-${leaderFirstName}`
+  }, [defaultRole, territoryInitials, leaderFirstName])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setInfo('')
 
-    if (!email) { setError('Email es obligatorio'); return }
-    if (!password || password.length < 6) { setError('Contraseña mínima de 6 caracteres'); return }
-    if (!territory_id) { setError('Debes seleccionar un territorio'); return }
+    if (!email) return setError('Email es obligatorio')
+    if (!password || password.length < 6) return setError('Contraseña mínima de 6 caracteres')
+    if (!territory_id) return setError('Debes seleccionar un territorio')
+    if (!full_name.trim()) return setError('Nombre completo es obligatorio')
+    if (defaultRole === 'leader' && !group_name) {
+      return setError('No se pudo generar el nombre de grupo. Verifica territorio y nombre.')
+    }
 
     setLoading(true)
     try {
+      setInfo('Creando usuario…')
       await createUserAdmin({
         email,
         password,
         full_name,
-        role: defaultRole,                  // 'leader' o 'pastor'
-        territory_id: Number(territory_id)  // requerido por la Edge Function
+        role: defaultRole,
+        territory_id: Number(territory_id),
+        // aunque es no editable, lo enviamos igual
+        ...(defaultRole === 'leader' ? { group_name } : {})
       })
 
-      // Limpieza
-      setFullName(''); setEmail(''); setPassword(''); setTerritoryId('')
+      setInfo(
+        defaultRole === 'leader'
+          ? `✅ Usuario y grupo "${group_name}" creados correctamente.`
+          : '✅ Usuario creado correctamente.'
+      )
+
+      // Limpiar
+      setFullName('')
+      setEmail('')
+      setPassword('')
+      setTerritoryId('')
       onCreated?.()
     } catch (err) {
       console.error(err)
@@ -60,6 +107,11 @@ export default function UserForm({ defaultRole, onCreated }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {error && <div className="text-red-600 text-sm">{error}</div>}
+      {info && !error && (
+        <div className="text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2 text-sm">
+          {info}
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium">Nombre completo</label>
@@ -67,6 +119,8 @@ export default function UserForm({ defaultRole, onCreated }) {
           className="w-full border rounded px-3 py-2"
           value={full_name}
           onChange={e => setFullName(e.target.value)}
+          placeholder="Ej. Kay Johnson"
+          required
         />
       </div>
 
@@ -88,6 +142,7 @@ export default function UserForm({ defaultRole, onCreated }) {
           className="w-full border rounded px-3 py-2"
           value={password}
           onChange={e => setPassword(e.target.value)}
+          minLength={6}
           required
         />
       </div>
@@ -109,7 +164,23 @@ export default function UserForm({ defaultRole, onCreated }) {
         </select>
       </div>
 
+      {defaultRole === 'leader' && (
+        <div>
+          <label className="block text-sm font-medium">Nombre del Grupo</label>
+          <input
+            className="w-full border rounded px-3 py-2 bg-gray-100 text-gray-700"
+            value={group_name}
+            readOnly
+            disabled
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Se genera automáticamente con: GE‑(siglas del territorio)‑(primer nombre del líder).
+          </p>
+        </div>
+      )}
+
       <button
+        type="submit"
         disabled={loading}
         className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
       >

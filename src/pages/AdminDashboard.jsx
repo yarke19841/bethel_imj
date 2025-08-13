@@ -1,4 +1,3 @@
-// src/pages/AdminDashboard.jsx
 import RequireAuth from '../components/RequireAuth'
 import LogoutButton from '../components/LogoutButton'
 import { useAuth } from '../context/AuthContext'
@@ -7,11 +6,13 @@ import { supabase } from '../lib/supabase'
 import { Link } from 'react-router-dom'
 import {
   ResponsiveContainer,
-  PieChart, Pie, Tooltip, Legend,
+  PieChart, Pie, Tooltip, Legend, Cell,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts'
+import './AdminDashboard.css'
 
 const TERRITORIES_TABLE = 'territories'
+const PIE_COLORS = ['#6366f1', '#06b6d4'] // indigo & cyan
 
 export default function AdminDashboard() {
   const { profile, session } = useAuth()
@@ -26,7 +27,6 @@ export default function AdminDashboard() {
     const load = async () => {
       setLoading(true); setError('')
       try {
-        // ✅ Conteos vía RPC (no toques profiles directo)
         const [leadersCnt, pastorsCnt, territoriesHead] = await Promise.all([
           supabase.rpc('admin_count_profiles_by_role', { role_in: 'leader' }),
           supabase.rpc('admin_count_profiles_by_role', { role_in: 'pastor' }),
@@ -42,7 +42,6 @@ export default function AdminDashboard() {
         const territories = territoriesHead.count ?? 0
         setCounts({ leaders, pastors, territories, groups: 0 }) // TODO: reemplaza groups cuando tengas la tabla
 
-        // ✅ Distribución por territorio (RPC)
         const dist = await supabase.rpc('admin_territory_distribution')
         if (dist.error) throw dist.error
 
@@ -68,38 +67,40 @@ export default function AdminDashboard() {
 
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-gray-100 p-6">
-        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold">Dashboard</h1>
-              <p className="text-sm text-gray-600">Bienvenido/a: {displayName}</p>
+      <div className="dash-page">
+        <div className="dash-container">
+          <header className="dash-header">
+            <div className="head-left">
+              <h1 className="dash-title">Dashboard</h1>
+              <p className="dash-subtitle">Bienvenido/a: <strong>{displayName}</strong></p>
             </div>
             <LogoutButton />
-          </div>
+          </header>
 
-          {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
+          {error && <div className="dash-alert" role="alert">{error}</div>}
 
           {loading ? (
-            <div>Cargando...</div>
+            <div className="dash-loading">Cargando…</div>
           ) : (
             <>
               {/* KPIs */}
-              <div className="grid md:grid-cols-4 gap-4">
+              <section className="kpi-grid">
                 <CardStat title="Líderes" value={counts.leaders} to="/manageleaders" />
                 <CardStat title="Pastores" value={counts.pastors} to="/managepastors" />
                 <CardStat title="Territorios" value={counts.territories} to="/manageterritories" />
                 <CardStat title="Grupos" value={counts.groups} to="/groups" />
-              </div>
+              </section>
 
               {/* Gráficas */}
-              <div className="mt-8 grid lg:grid-cols-2 gap-6">
-                <div className="p-4 rounded-xl bg-gray-50 shadow">
-                  <h3 className="font-semibold mb-3">Distribución por Rol</h3>
-                  <div className="h-72">
+              <section className="chart-grid">
+                <div className="card chart-card">
+                  <h3 className="card-title">Distribución por Rol</h3>
+                  <div className="chart-box">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={pieData} dataKey="value" nameKey="name" label />
+                        <Pie data={pieData} dataKey="value" nameKey="name" label outerRadius="80%">
+                          {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                        </Pie>
                         <Tooltip />
                         <Legend />
                       </PieChart>
@@ -107,9 +108,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-gray-50 shadow">
-                  <h3 className="font-semibold mb-3">Personas por Territorio</h3>
-                  <div className="h-72">
+                <div className="card chart-card">
+                  <h3 className="card-title">Personas por Territorio</h3>
+                  <div className="chart-box">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={byTerritory}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -117,23 +118,27 @@ export default function AdminDashboard() {
                         <YAxis allowDecimals={false} />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="leaders" name="Líderes" />
-                        <Bar dataKey="pastors" name="Pastores" />
+                        <Bar dataKey="leaders" name="Líderes" fill="#6366f1" radius={[6,6,0,0]} />
+                        <Bar dataKey="pastors" name="Pastores" fill="#06b6d4" radius={[6,6,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
-              </div>
+              </section>
 
               {/* Accesos rápidos */}
-              <div className="mt-8 grid md:grid-cols-3 gap-4">
+              <section className="quick-grid">
                 <QuickLink title="Gestionar Líderes" to="/manageleaders" />
                 <QuickLink title="Gestionar Pastores" to="/managepastors" />
                 <QuickLink title="Gestionar Territorios" to="/manageterritories" />
-              </div>
+              </section>
             </>
           )}
         </div>
+        {/* Fondo decorativo */}
+        <div className="dash-bubble b1" />
+        <div className="dash-bubble b2" />
+        <div className="dash-bubble b3" />
       </div>
     </RequireAuth>
   )
@@ -141,17 +146,20 @@ export default function AdminDashboard() {
 
 function CardStat({ title, value, to }) {
   return (
-    <Link to={to} className="block p-5 rounded-xl bg-gray-50 shadow hover:shadow-md transition">
-      <div className="text-gray-500 text-sm">{title}</div>
-      <div className="text-3xl font-semibold">{value}</div>
+    <Link to={to} className="kpi-card">
+      <div className="kpi-title">{title}</div>
+      <div className="kpi-value">{value}</div>
     </Link>
   )
 }
 
 function QuickLink({ title, to }) {
   return (
-    <Link to={to} className="block p-4 rounded-xl bg-gray-50 shadow hover:shadow-md transition">
-      {title}
+    <Link to={to} className="quick-card">
+      <span>{title}</span>
+      <svg className="quick-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M7 17L17 7M17 7H9M17 7V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
     </Link>
   )
 }

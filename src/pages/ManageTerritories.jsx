@@ -1,4 +1,3 @@
-// src/pages/ManageTerritories.jsx
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import RequireAuth from '../components/RequireAuth'
@@ -8,12 +7,15 @@ import { Link } from 'react-router-dom'
 import {
   ResponsiveContainer,
   PieChart, Pie, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell
 } from 'recharts'
+import './ManageTerritories.css'
 
-const TABLE = 'territories'        // cámbialo a "Territories" si tu tabla usa mayúscula
+const TABLE = 'territories'
 const LEADERS_VIEW = 'leaders_admin'
 const PASTORS_VIEW = 'pastors_admin'
+
+const PIE_COLORS = ['#6366f1', '#06b6d4']
 
 export default function ManageTerritories() {
   const { profile, session } = useAuth()
@@ -147,28 +149,30 @@ export default function ManageTerritories() {
 
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-gray-100 p-6">
-        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow p-6">
+      <div className="mt-page">
+        <div className="mt-container">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <header className="mt-header">
             <div>
-              <h1 className="text-2xl font-semibold">Gestionar Territorios</h1>
-              <p className="text-sm text-gray-600">Hola, {displayName}</p>
+              <h1 className="mt-title">Gestionar Territorios</h1>
+              <p className="mt-subtitle">Hola, <strong>{displayName}</strong></p>
             </div>
-            <div className="flex items-center gap-2">
-              <Link to="/dashboard" className="px-3 py-2 rounded bg-gray-200">Dashboard</Link>
+            <div className="mt-actions">
+              <Link to="/dashboard" className="btn btn-secondary">Dashboard</Link>
               <LogoutButton />
             </div>
-          </div>
+          </header>
 
           {/* GRÁFICAS */}
-          <div className="grid lg:grid-cols-2 gap-6 mb-6">
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h3 className="font-semibold mb-3">Distribución por Rol (activos)</h3>
-              <div className="h-72">
+          <section className="chart-grid">
+            <div className="card chart-card">
+              <h3 className="card-title">Distribución por Rol (activos)</h3>
+              <div className="chart-box">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" label />
+                    <Pie data={pieData} dataKey="value" nameKey="name" label outerRadius="80%">
+                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
                     <Tooltip />
                     <Legend />
                   </PieChart>
@@ -176,9 +180,9 @@ export default function ManageTerritories() {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h3 className="font-semibold mb-3">Personas por Territorio (activos)</h3>
-              <div className="h-72">
+            <div className="card chart-card">
+              <h3 className="card-title">Personas por Territorio (activos)</h3>
+              <div className="chart-box">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={byTerritory}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -186,114 +190,113 @@ export default function ManageTerritories() {
                     <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="leaders" name="Líderes" />
-                    <Bar dataKey="pastors" name="Pastores" />
+                    <Bar dataKey="leaders" name="Líderes" fill="#6366f1" radius={[6,6,0,0]} />
+                    <Bar dataKey="pastors" name="Pastores" fill="#06b6d4" radius={[6,6,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Crear + Tabla */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <section className="mt-grid">
             {/* Form crear */}
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h2 className="font-semibold mb-3">Crear territorio</h2>
-              {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
-              <form onSubmit={handleCreate} className="flex gap-2">
+            <div className="card">
+              <h2 className="card-title">Crear territorio</h2>
+              {error && <p className="mt-alert">{error}</p>}
+              <form onSubmit={handleCreate} className="mt-form-row">
                 <input
-                  className="flex-1 border rounded px-3 py-2"
+                  className="input"
                   placeholder="Nombre del territorio"
                   value={name}
                   onChange={e => setName(e.target.value)}
                 />
-                <button
-                  disabled={loading}
-                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? 'Creando...' : 'Crear'}
+                <button className="btn btn-primary" disabled={loading}>
+                  {loading ? 'Creando…' : 'Crear'}
                 </button>
               </form>
-              <p className="text-xs text-gray-500 mt-2">* El nombre debe ser único.</p>
+              <p className="hint">* El nombre debe ser único.</p>
             </div>
 
             {/* Tabla */}
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold">Territorios</h2>
+            <div className="card">
+              <div className="table-head">
+                <h2 className="card-title">Territorios</h2>
                 <input
-                  className="border rounded px-3 py-2"
+                  className="input input-sm"
                   placeholder="Buscar..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+              <div className="table-wrap">
+                <table className="table">
                   <thead>
-                    <tr className="text-left border-b">
-                      <th className="py-2 px-2">Nombre</th>
-                      <th className="py-2 px-2">Estado</th>
-                      <th className="py-2 px-2">Acciones</th>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Estado</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map(r => (
-                      <tr key={r.id} className="border-b">
-                        <td className="py-2 px-2">{r.name}</td>
-                        <td className="py-2 px-2">
-                          <span className={`px-2 py-1 rounded text-xs ${r.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                      <tr key={r.id}>
+                        <td>{r.name}</td>
+                        <td>
+                          <span className={`badge ${r.is_active ? 'badge-green' : 'badge-gray'}`}>
                             {r.is_active ? 'Activo' : 'Inactivo'}
                           </span>
                         </td>
-                        <td className="py-2 px-2 flex gap-2">
-                          <button
-                            onClick={() => setEditing({ id: r.id, name: r.name, is_active: r.is_active })}
-                            className="px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => toggleActive(r)}
-                            className="px-2 py-1 rounded bg-gray-700 text-white hover:bg-gray-800"
-                          >
-                            {r.is_active ? 'Inactivar' : 'Activar'}
-                          </button>
-                          <button
-                            onClick={() => remove(r)}
-                            className="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                          >
-                            Eliminar
-                          </button>
+                        <td>
+                          <div className="table-actions">
+                            <button
+                              onClick={() => setEditing({ id: r.id, name: r.name, is_active: r.is_active })}
+                              className="btn btn-small btn-blue"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => toggleActive(r)}
+                              className="btn btn-small btn-dark"
+                            >
+                              {r.is_active ? 'Inactivar' : 'Activar'}
+                            </button>
+                            <button
+                              onClick={() => remove(r)}
+                              className="btn btn-small btn-red"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td className="py-4 px-2 text-gray-500" colSpan="3">Sin territorios.</td>
+                        <td colSpan="3" className="empty">Sin territorios.</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Modal edición */}
           {editing && (
-            <div className="fixed inset-0 bg-black/30 flex items-center justify-center">
-              <div className="bg-white rounded-xl p-4 w-full max-w-md">
-                <h3 className="font-semibold mb-3">Editar territorio</h3>
+            <div className="modal-backdrop" role="dialog" aria-modal="true">
+              <div className="modal">
+                <h3 className="card-title">Editar territorio</h3>
 
-                <label className="block text-sm mb-1">Nombre</label>
+                <label className="label">Nombre</label>
                 <input
-                  className="w-full border rounded px-3 py-2 mb-3"
+                  className="input"
                   value={editing.name}
                   onChange={e => setEditing(prev => ({ ...prev, name: e.target.value }))}
                 />
 
-                <label className="inline-flex items-center gap-2 mb-4">
+                <label className="check">
                   <input
                     type="checkbox"
                     checked={!!editing.is_active}
@@ -302,14 +305,19 @@ export default function ManageTerritories() {
                   <span>Activo</span>
                 </label>
 
-                <div className="flex justify-end gap-2">
-                  <button className="px-3 py-2 rounded bg-gray-200" onClick={() => setEditing(null)}>Cancelar</button>
-                  <button className="px-3 py-2 rounded bg-blue-600 text-white" onClick={saveEdit}>Guardar</button>
+                <div className="modal-actions">
+                  <button className="btn btn-secondary" onClick={() => setEditing(null)}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={saveEdit}>Guardar</button>
                 </div>
               </div>
             </div>
           )}
         </div>
+
+        {/* Fondo decorativo */}
+        <div className="mt-bubble b1" />
+        <div className="mt-bubble b2" />
+        <div className="mt-bubble b3" />
       </div>
     </RequireAuth>
   )

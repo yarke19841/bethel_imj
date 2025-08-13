@@ -5,6 +5,7 @@ import UsersTable from '../components/UsersTable'
 import UserForm from '../components/UserForm'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import './ManageLeaders.css'
 
 export default function ManageLeaders() {
   const { profile, session } = useAuth()
@@ -13,34 +14,42 @@ export default function ManageLeaders() {
 
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-gray-100 p-6">
-        <div className="max-w-7xl mx-auto bg-white rounded-xl shadow p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-semibold">Gestionar Líderes</h1>
-              <p className="text-sm text-gray-600">Hola, {displayName}</p>
+      <div className="ml-page">
+        <div className="ml-container">
+          <header className="ml-header">
+            <div className="ml-head-left">
+              <h1 className="ml-title">Gestionar Líderes</h1>
+              <p className="ml-subtitle">Hola, <strong>{displayName}</strong></p>
             </div>
-            <div className="flex items-center gap-2">
-              <Link to="/dashboard" className="px-3 py-2 rounded bg-gray-200">Dashboard</Link>
+            <div className="ml-actions">
+              <Link to="/dashboard" className="btn btn-secondary">Dashboard</Link>
               <LogoutButton />
             </div>
-          </div>
+          </header>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h2 className="font-semibold mb-3">Crear Líder</h2>
+          <section className="ml-grid">
+            <div className="card">
+              <h2 className="card-title">Crear Líder</h2>
               <UserForm
                 defaultRole="leader"
                 onCreated={() => setRefreshKey(x => x + 1)}
               />
             </div>
 
-            <div className="p-4 rounded-xl bg-gray-50 shadow">
-              <h2 className="font-semibold mb-3">Líderes</h2>
+            <div className="card">
+              <div className="card-title-row">
+                <h2 className="card-title">Líderes</h2>
+                {/* Si quieres agregar un buscador/filtrado rápido, lo ponemos aquí */}
+              </div>
               <UsersTable role="leader" refreshKey={refreshKey} />
             </div>
-          </div>
+          </section>
         </div>
+
+        {/* Fondo decorativo */}
+        <div className="ml-bubble b1" />
+        <div className="ml-bubble b2" />
+        <div className="ml-bubble b3" />
       </div>
     </RequireAuth>
   )

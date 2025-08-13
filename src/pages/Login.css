@@ -1,0 +1,186 @@
+/* Fuente base y reset suave */
+:root {
+  --bg-1: #5b7cfa;
+  --bg-2: #a855f7;
+  --bg-3: #ec4899;
+  --card-bg: #ffffff;
+  --text-900: #0f172a;
+  --text-700: #334155;
+  --text-500: #64748b;
+  --indigo-600: #4f46e5;
+  --indigo-700: #4338ca;
+  --ring: rgba(79, 70, 229, 0.25);
+  --shadow: 0 20px 50px rgba(2, 6, 23, 0.18);
+  --radius-xl: 16px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial;
+  color: var(--text-900);
+  background: linear-gradient(135deg, var(--bg-1), var(--bg-2) 50%, var(--bg-3));
+}
+
+.login-page {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tarjeta */
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: saturate(120%) blur(6px);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Marca */
+.brand {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.logo {
+  width: 56px; height: 56px;
+  margin: 0 auto 10px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--indigo-600), var(--bg-2));
+  color: white;
+  display: grid; place-items: center;
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.35);
+}
+.brand h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+.subtitle {
+  margin: 6px 0 0;
+  color: var(--text-500);
+  font-size: 14px;
+}
+
+/* Formulario */
+.form { margin-top: 18px; }
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-700);
+  margin-bottom: 6px;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 15px;
+  outline: none;
+  transition: box-shadow .2s, border-color .2s, transform .05s;
+  background: #fff;
+}
+
+input:focus {
+  border-color: var(--indigo-600);
+  box-shadow: 0 0 0 6px var(--ring);
+}
+
+/* Password con botón ver/ocultar */
+.password-wrap {
+  position: relative;
+}
+.password-wrap .toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  translate: 0 -50%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--indigo-600);
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.password-wrap .toggle:hover {
+  background: rgba(79,70,229,.08);
+}
+
+/* Botón principal */
+.submit {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--indigo-600), var(--indigo-700));
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(67, 56, 202, 0.35);
+  transition: transform .06s ease, filter .15s ease;
+  margin-top: 6px;
+}
+.submit:hover { filter: brightness(1.05); }
+.submit:active { transform: translateY(1px); }
+.submit:disabled {
+  opacity: .75;
+  cursor: not-allowed;
+  filter: grayscale(.2);
+}
+
+/* Links */
+.links {
+  text-align: center;
+  margin-top: 12px;
+}
+.links a {
+  color: var(--indigo-600);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.links a:hover { text-decoration: underline; }
+
+/* Alerta */
+.alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+/* Burbujas decorativas */
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.35;
+}
+.b1 { width: 320px; height: 320px; background: #a78bfa; left: -80px; top: -80px; }
+.b2 { width: 280px; height: 280px; background: #60a5fa; right: -60px; top: 20%; }
+.b3 { width: 220px; height: 220px; background: #fb7185; left: 10%; bottom: -80px; }
+
+/* Responsivo pequeño */
+@media (max-width: 420px) {
+  .login-card { padding: 24px; }
+  .brand h1 { font-size: 24px; }
+}
