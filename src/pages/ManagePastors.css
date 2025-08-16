@@ -1,116 +1,217 @@
-:root{
-  --bg-1:#5b7cfa; --bg-2:#a855f7; --bg-3:#ec4899;
-  --card:#ffffff; --muted:#f8fafc;
-  --text-900:#0f172a; --text-700:#334155; --text-500:#64748b;
-  --brand-600:#4f46e5; --brand-700:#4338ca;
-  --ring:rgba(79,70,229,.22);
-  --shadow-lg:0 20px 50px rgba(2,6,23,.16);
-  --shadow:0 10px 20px rgba(2,6,23,.10);
-  --radius:16px; --radius-sm:12px;
-  --border:#e9eef9;
-}
-
-*{box-sizing:border-box}
-html,body,#root{height:100%}
-body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; color:var(--text-900)}
-
+/* Layout base para Pastores */
 .mp-page{
-  min-height:100vh;
-  background:linear-gradient(140deg,var(--bg-1),var(--bg-2) 50%,var(--bg-3));
-  padding:24px;
-  position:relative;
-  overflow:hidden;
-  display:flex; align-items:flex-start; justify-content:center;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f5f7fb, #eef2ff);
+  padding: 24px;
+  position: relative;
 }
-
 .mp-container{
-  width:100%;
-  max-width:1180px;
-  background:rgba(255,255,255,.96);
-  backdrop-filter:saturate(120%) blur(6px);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow-lg);
-  padding:28px;
-  position:relative;
-  z-index:1;
+  max-width: 1120px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(2,6,23,.08);
+  padding: 24px;
 }
 
+/* Header */
 .mp-header{
   display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:18px;
+  margin-bottom:16px;
 }
-.mp-title{ margin:0; font-size:28px; font-weight:800 }
-.mp-subtitle{ margin:6px 0 0; color:var(--text-500); font-size:14px }
+.mp-title{ font-size:22px; font-weight:700; color:#111827; }
+.mp-subtitle{ font-size:13px; color:#64748b; margin-top:2px; }
+.mp-actions{ display:flex; gap:8px; }
 
-.mp-actions{ display:flex; gap:10px; align-items:center }
-
-.btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  height:38px; padding:0 14px; border-radius:12px; border:1px solid var(--border);
-  font-weight:700; font-size:14px; text-decoration:none; cursor:pointer; user-select:none;
-  transition:transform .06s ease, box-shadow .15s ease, filter .15s ease, background .15s ease;
-}
-.btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(2,6,23,.10); filter:brightness(1.02) }
-.btn:active{ transform:translateY(0) }
-.btn-secondary{ background:linear-gradient(135deg,#ffffff,#f5f7ff); color:#111827 }
-
+/* Grid principal por secciones */
 .mp-grid{
-  display:grid; gap:16px; grid-template-columns: repeat(2, minmax(0,1fr));
+  display:grid; gap:16px;
+  grid-template-columns: repeat(1, minmax(0,1fr));
+  margin-top: 16px;
 }
-@media (max-width: 980px){ .mp-grid{ grid-template-columns:1fr } }
+@media (min-width: 900px){
+  .mp-grid{ grid-template-columns: 1fr 1fr; }
+}
 
+/* Reusar estilos globales .card, .input, .btn, etc. */
+
+/* Filtros y KPIs */
+.mp-filters{
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
+}
+.mp-filter{ display: grid; gap: 6px; }
+@media (min-width: 900px){
+  /* Pastor, Territorio, Bethel, Desde, Hasta, Botón */
+  .mp-filters{ grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; align-items: end; }
+}
+
+/* KPIs */
+.mp-kpis{
+  display:grid; gap:10px; grid-template-columns: repeat(2, minmax(0,1fr));
+}
+@media (min-width: 900px){
+  .mp-kpis{ grid-template-columns: repeat(8, minmax(0,1fr)); }
+}
+.kpi{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; }
+.kpi-title{ font-size:12px; color:#64748b; }
+.kpi-value{ font-weight:700; font-size:18px; color:#0f172a; }
+.kpi-value.up{ color:#166534; }
+.kpi-value.down{ color:#b91c1c; }
+
+/* Gráficas */
+.chart-wrap{ width:100%; height:280px; }
+
+/* Decorativo opcional */
+.mp-bubble{
+  position:fixed; z-index:-1; border-radius:999px; filter:blur(50px); opacity:.35;
+}
+.mp-bubble.b1{ width:42vmin; height:42vmin; right:-10vmin; top:-8vmin; background:radial-gradient(closest-side, #93c5fd, transparent 70%); }
+.mp-bubble.b2{ width:36vmin; height:36vmin; left:-8vmin; bottom:-10vmin; background:radial-gradient(closest-side, #c7d2fe, transparent 70%); }
+.mp-bubble.b3{ width:24vmin; height:24vmin; right:8vmin; bottom:-6vmin; background:radial-gradient(closest-side, #a7f3d0, transparent 70%); }
+
+/* Layout base para Pastores */
+.mp-page{
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f5f7fb, #eef2ff);
+  padding: 24px;
+  position: relative;
+}
+.mp-container{
+  max-width: 1120px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(2,6,23,.08);
+  padding: 24px;
+}
+
+/* Header */
+.mp-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px;
+}
+.mp-title{ font-size:22px; font-weight:700; color:#111827; }
+.mp-subtitle{ font-size:13px; color:#64748b; margin-top:2px; }
+.mp-actions{ display:flex; gap:8px; }
+
+/* Utilidades */
+.row-between{ display:flex; align-items:center; justify-content:space-between; }
+.muted{ color:#94a3b8; font-size:12px; }
+
+/* Grid principal por secciones */
+.mp-grid{
+  display:grid; gap:16px;
+  grid-template-columns: repeat(1, minmax(0,1fr));
+  margin-top: 16px;
+}
+@media (min-width: 900px){
+  .mp-grid{ grid-template-columns: 1fr 1fr; }
+}
+
+/* Filtros */
+.mp-filters{
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  margin-bottom: 12px;
+}
+.mp-filter{ display: grid; gap: 6px; }
+.mp-filter .label{ font-size:12px; color:#64748b; }
+.mp-filter select,
+.mp-filter input[type="date"]{
+  width:100%; border:1px solid #d1d5db; border-radius:10px;
+  padding:10px 12px; font-size:14px; background:#fff; outline:none;
+}
+.mp-filter select:focus,
+.mp-filter input[type="date"]:focus{
+  box-shadow:0 0 0 3px rgba(99,102,241,.2); border-color:#6366f1;
+}
+@media (min-width: 900px){
+  /* Pastor, Territorio, Bethel, Desde, Hasta, Botón */
+  .mp-filters{ grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; align-items: end; }
+}
+
+/* KPIs (alias: soporta .mp-kpis y .kpi-grid) */
+.mp-kpis,
+.kpi-grid{
+  display:grid; gap:10px; grid-template-columns: repeat(2, minmax(0,1fr));
+}
+@media (min-width: 900px){
+  .mp-kpis,
+  .kpi-grid{ grid-template-columns: repeat(8, minmax(0,1fr)); }
+}
+.kpi{
+  background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px;
+  display:grid; gap:4px;
+}
+.kpi > div:first-child{ font-size:12px; color:#64748b; }
+.kpi strong{ font-weight:800; font-size:18px; color:#0f172a; }
+.kpi .up{ color:#166534; }
+.kpi .down{ color:#b91c1c; }
+
+/* Cards reutilizan estilos globales (.card). Si no los tienes, descomenta:
 .card{
-  background:#fff; border-radius:14px; box-shadow:var(--shadow);
-  border:1px solid var(--border); padding:16px;
+  background:#fff; border:1px solid #e5e7eb;
+  border-radius:16px; box-shadow:0 4px 16px rgba(2,6,23,.04);
 }
-.card-title{ margin:0 0 12px; font-weight:800; font-size:18px; color:var(--text-700) }
-.card-title-row{ display:flex; align-items:center; justify-content:space-between; gap:10px }
+.card-body{ padding:16px; }
+.card-subtitle{ font-weight:600; color:#334155; font-size:14px; }
+*/
 
-/* Inputs/labels dentro de los formularios embebidos */
-.card label{ display:block; font-size:13px; font-weight:600; color:var(--text-700); margin:8px 0 6px }
-.card input, .card select, .card textarea{
-  width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:12px; font-size:14px;
-  outline:none; transition:box-shadow .2s,border-color .2s,transform .05s; background:#fff;
+/* Contenedor de gráficas */
+.charts{
+  display:grid; gap:16px;
+  grid-template-columns: 1fr;
+  margin-top: 16px;
 }
-.card input:focus, .card select:focus, .card textarea:focus{
-  border-color:var(--brand-600); box-shadow:0 0 0 6px var(--ring);
+@media (min-width: 1100px){
+  .charts{ grid-template-columns: 1fr 1fr; }
 }
-.card button[type="submit"]{
-  margin-top:10px;
-  border:none; border-radius:12px; padding:10px 14px; font-weight:700; color:#fff;
-  background:linear-gradient(135deg,var(--brand-600),var(--brand-700));
-  cursor:pointer; box-shadow:0 10px 20px rgba(67,56,202,.22);
-  transition:transform .06s ease, filter .15s ease;
-}
-.card button[type="submit"]:hover{ filter:brightness(1.05) }
-.card button[type="submit"]:active{ transform:translateY(1px) }
-
-/* Estilos base para una tabla nativa (UsersTable) */
-.card table{
-  width:100%; border-collapse:separate; border-spacing:0; font-size:14px;
-}
-.card thead th{
-  text-align:left; font-weight:800; color:var(--text-700);
-  border-bottom:1px solid var(--border); padding:10px 12px; background:#fbfcff;
-}
-.card tbody td{
-  border-bottom:1px solid #f2f4fa; padding:10px 12px; color:#111827;
-}
-.card tbody tr:hover{ background:#fafcff }
-
-.card .table-actions{
-  display:flex; gap:8px; flex-wrap:wrap;
-}
-.card .btn-small{
-  height:32px; padding:0 10px; border-radius:10px; border:1px solid var(--border);
-  background:#fff; font-weight:700; font-size:13px; cursor:pointer;
-}
-.card .btn-small.primary{
-  background:linear-gradient(135deg,var(--brand-600),var(--brand-700)); color:#fff; border:none;
+@media (min-width: 1400px){
+  .charts{ grid-template-columns: 1fr 1fr 1fr; }
 }
 
-/* Fondo decorativo */
-.mp-bubble{ position:absolute; border-radius:50%; filter:blur(50px); opacity:.28 }
-.b1{ width:360px; height:360px; background:#a78bfa; left:-80px; top:-80px }
-.b2{ width:300px; height:300px; background:#60a5fa; right:-60px; top:16% }
-.b3{ width:240px; height:240px; background:#fb7185; left:10%; bottom:-80px }
+.chart-card{
+  background:#fff; border:1px solid #e5e7eb;
+  border-radius:16px; box-shadow:0 4px 16px rgba(2,6,23,.04);
+  padding:16px;
+}
+.chart-card h3{
+  margin:0 0 8px; font-size:14px; font-weight:700; color:#334155;
+}
+
+/* Tamaño mínimo para Recharts */
+.chart-wrap{ width:100%; height:280px; }
+
+/* Botones (si no heredas globales) */
+/*
+.btn{
+  appearance:none; border:none; cursor:pointer; user-select:none;
+  border-radius:10px; padding:8px 12px; font-size:14px; font-weight:600;
+  background:#e5e7eb; color:#111827; transition:.15s ease;
+}
+.btn:hover{ transform:translateY(-1px); box-shadow:0 8px 18px rgba(2,6,23,.10); filter:brightness(1.02); }
+.btn-sm{ padding:6px 10px; font-size:13px; }
+.btn-emerald{ background:#10b981; color:#fff; }
+.btn-secondary{ background:#e2e8f0; color:#0f172a; }
+*/
+
+/* Animación sutil */
+.chart-card, .kpi{
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.chart-card:hover, .kpi:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(2,6,23,.08);
+}
+
+/* Decorativo opcional */
+.mp-bubble{
+  position:fixed; z-index:-1; border-radius:999px; filter:blur(50px); opacity:.35;
+}
+.mp-bubble.b1{ width:42vmin; height:42vmin; right:-10vmin; top:-8vmin; background:radial-gradient(closest-side, #93c5fd, transparent 70%); }
+.mp-bubble.b2{ width:36vmin; height:36vmin; left:-8vmin; bottom:-10vmin; background:radial-gradient(closest-side, #c7d2fe, transparent 70%); }
+.mp-bubble.b3{ width:24vmin; height:24vmin; right:8vmin; bottom:-6vmin; background:radial-gradient(closest-side, #a7f3d0, transparent 70%); }
