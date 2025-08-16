@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import RequireAuth from '../components/RequireAuth'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './StaffDashboard.css'
 
 import {
@@ -16,6 +16,7 @@ import {
   Tooltip, Legend
 } from 'recharts'
 
+// ===== Helpers de fechas/buckets =====
 function clampDateStr(s){ return (s||'').slice(0,10) }
 function startOfWeek(d){ const x=new Date(d); const dow=x.getDay()||7; x.setHours(0,0,0,0); x.setDate(x.getDate()-(dow-1)); return x }
 function startOfMonth(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(1); return x }
@@ -35,21 +36,26 @@ function generateBucketRange(bucket, fromStr, toStr){
 }
 
 export default function StaffDashboard() {
+  const navigate = useNavigate()
+
   const { profile, session } = useAuth()
-  const role = profile?.role || 'pastor' // 'admin' o 'pastor'
+  const role = (profile?.role || 'pastor').toLowerCase() // 'admin' o 'pastor'
   const userId = session?.user?.id
-  const displayName = profile?.full_name || profile?.name || session?.user?.email?.split('@')[0] || 'Usuario'
+  const displayName =
+    profile?.full_name || profile?.name || session?.user?.email?.split('@')[0] || 'Usuario'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [territories, setTerritories] = useState([])
-  const [groups, setGroups] = useState([])
-  const [leaders, setLeaders] = useState({})
+
+  const [territories, setTerritories] = useState([]) // [{id,name}]
+  const [groups, setGroups] = useState([])           // [{id,name,territory_id,leader_user_id}]
+  const [leaders, setLeaders] = useState({})         // { user_id: {full_name,email} }
   const [search, setSearch] = useState('')
 
   // === Bethels (TODOS, sin filtro por territorio) ===
-  const [bethels, setBethels] = useState([])
-  const [selectedBethelId, setSelectedBethelId] = useState('')
+  const [bethels, setBethels] = useState([]) // [{id,name,year,is_active}]
+  // Selección de Bethel por territorio (clave = territory_id)
+  const [selectedBethelByTerritory, setSelectedBethelByTerritory] = useState({})
 
   // series/aggregados
   const [seriesLoading, setSeriesLoading] = useState(false)
@@ -118,7 +124,9 @@ export default function StaffDashboard() {
         }
 
         const terrIds = Array.from(terrSet)
-        if (!terrIds.length){ setTerritories([]); setGroups([]); setError('No tienes territorios asignados.'); }
+        if (!terrIds.length){
+          setTerritories([]); setGroups([]); setError('No tienes territorios asignados.')
+        }
         const missing = terrIds.filter(id=>!terrMap.get(id))
         if (missing.length){
           const { data: ts } = await supabase.from('territories').select('id,name').in('id', missing)
@@ -131,7 +139,7 @@ export default function StaffDashboard() {
         const { data: grs } = await supabase
           .from('groups')
           .select('id,name,territory_id,leader_user_id')
-          .in('territory_id', terrIds.length?terrIds:[-1]) // evita full-scan si vacío
+          .in('territory_id', terrIds.length?terrIds:[-1])
           .order('name', { ascending:true })
         const groupsData = grs || []
         setGroups(groupsData)
@@ -148,7 +156,7 @@ export default function StaffDashboard() {
         }
         setLeaders(leaderDict)
 
-        // ===== Bethels: TODOS (sin territory_id, sin restricción) =====
+        // ===== Bethels: TODOS =====
         const { data: bs, error: bErr } = await supabase
           .from('bethels')
           .select('id, name, year, is_active')
@@ -157,8 +165,6 @@ export default function StaffDashboard() {
         if (bErr) throw bErr
         const bethelList = bs || []
         setBethels(bethelList)
-        const defaultBethel = bethelList.find(b=>b.is_active) || bethelList[0]
-        setSelectedBethelId(defaultBethel?.id ? String(defaultBethel.id) : '')
 
       }catch(e){
         console.error(e); setError(e.message || 'No se pudo cargar el panel del pastor.')
@@ -327,10 +333,15 @@ export default function StaffDashboard() {
     return ids.size
   }, [scopedGroups])
 
-  const selectedBethel = useMemo(
-    () => bethels.find(b => String(b.id) === String(selectedBethelId)) || null,
-    [bethels, selectedBethelId]
-  )
+  // ===== Bethel selector por territorio + navegación =====
+  function setBethelForTerritory(territoryId, bethelId){
+    setSelectedBethelByTerritory(prev => ({ ...prev, [territoryId]: bethelId }))
+  }
+  function openBethelAnalytics(territoryId){
+    const bethelId = selectedBethelByTerritory[territoryId]
+    if (!bethelId){ alert('Selecciona un Bethel.'); return }
+    navigate(`/bethel/${bethelId}?territory=${territoryId}`)
+  }
 
   return (
     <RequireAuth>
@@ -344,32 +355,6 @@ export default function StaffDashboard() {
               <p className="sd-subtitle">Hola, <strong>{displayName}</strong></p>
             </div>
             <div className="sd-actions">
-              {/* Selector de Bethel (TODOS) + botón a analítica */}
-              <div style={{ display:'flex', gap:8, alignItems:'center', marginRight:8 }}>
-                <select
-                  className="input"
-                  value={selectedBethelId}
-                  onChange={e=>setSelectedBethelId(e.target.value)}
-                  style={{ minWidth: 220 }}
-                >
-                  <option value="">Selecciona un Bethel…</option>
-                  {bethels.map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} {b.year}
-                    </option>
-                  ))}
-                </select>
-
-                <Link
-                  to="/BethelAnalytics"
-                  state={{ bethel: selectedBethel || null }}
-                  className="btn btn-secondary"
-                  onClick={(e)=>{ if(!selectedBethel){ e.preventDefault(); alert('Selecciona primero un Bethel.'); } }}
-                >
-                  Ver gráficas de Bethel
-                </Link>
-              </div>
-
               <LogoutButton />
             </div>
           </header>
@@ -584,7 +569,7 @@ export default function StaffDashboard() {
           <section className="card">
             <div className="card-head">
               <h3 className="card-title">Grupos bajo mi territorio</h3>
-              <p className="card-desc">Solo se muestran los grupos y líderes de tus territorios asignados.</p>
+              <p className="card-desc">Selecciona un Bethel por territorio y abre su analítica.</p>
             </div>
             <div className="card-body">
               <div className="toolbar">
@@ -603,9 +588,30 @@ export default function StaffDashboard() {
               ) : (
                 groupsByTerritory.map(bucket => (
                   <div key={bucket.territory.id} className="territory-card">
-                    <div className="territory-head">
+                    <div className="territory-head" style={{ gap: 10 }}>
                       <div className="territory-badge">{bucket.territory.name}</div>
                       <div className="muted">{bucket.items.length} grupo(s)</div>
+
+                      {/* Selector y botón de Bethel por territorio */}
+                      <div style={{ display:'flex', gap:8, alignItems:'center', marginLeft:'auto' }}>
+                        <select
+                          className="input"
+                          style={{ minWidth: 240 }}
+                          value={selectedBethelByTerritory[bucket.territory.id] || ''}
+                          onChange={e => setBethelForTerritory(bucket.territory.id, e.target.value)}
+                        >
+                          <option value="">— Selecciona Bethel —</option>
+                          {bethels.map(b => (
+                            <option key={b.id} value={b.id}>{b.name} {b.year}</option>
+                          ))}
+                        </select>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => openBethelAnalytics(bucket.territory.id)}
+                        >
+                          Ver gráficas
+                        </button>
+                      </div>
                     </div>
 
                     <div className="table-wrap">
