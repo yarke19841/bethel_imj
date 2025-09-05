@@ -1083,7 +1083,7 @@ export default function LeaderHome() {
                                     </Button>
                                     </div>
                                   </div>
-                                  <Anen1428@</Anen1428>
+                                  
                                 </li>
                               ))}
                             </ul>
