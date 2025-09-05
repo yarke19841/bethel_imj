@@ -1,3 +1,4 @@
+// src/pages/LeaderHome.jsx
 import RequireAuth from '../components/RequireAuth'
 import LogoutButton from '../components/LogoutButton'
 import { useAuth } from '../context/AuthContext'
@@ -8,6 +9,10 @@ import './LeaderHome.css'
 
 function getLocalYYYYMMDD(d = new Date()) {
   return d.toLocaleDateString('en-CA')
+}
+function firstDayOfCurrentMonth() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`
 }
 
 // UI básicos (sin Tailwind)
@@ -59,6 +64,10 @@ function Avatar({name}) {
   return <div className="avatar">{initials || 'L'}</div>
 }
 
+const Caret = ({open}) => (
+  <span className={`caret ${open ? 'open' : ''}`} aria-hidden>▸</span>
+)
+
 export default function LeaderHome() {
   const { profile, session } = useAuth()
   const leaderName = profile?.full_name || session?.user?.email?.split('@')[0] || 'Líder'
@@ -72,6 +81,9 @@ export default function LeaderHome() {
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
   const [uiInfo, setUiInfo] = useState('')
+
+  // mensaje específico del formulario de reunión (debajo del botón)
+  const [meetingMsg, setMeetingMsg] = useState('')
 
   const [meta, setMeta] = useState({
     date: getLocalYYYYMMDD(),
@@ -94,7 +106,7 @@ export default function LeaderHome() {
 
   const [editingPerson, setEditingPerson] = useState(null)
 
-  // ===== NUEVO: estado modal Bethel =====
+  // ===== Modal Bethel =====
   const [bethelModalOpen, setBethelModalOpen] = useState(false)
   const [bethels, setBethels] = useState([])
   const [selectedBethelId, setSelectedBethelId] = useState('')
@@ -107,6 +119,14 @@ export default function LeaderHome() {
     address: '',
   })
   const [bethelUi, setBethelUi] = useState('')
+
+  // ===== Rango de asistencia (agrupado por reunión) =====
+  const [rangeFrom, setRangeFrom] = useState(firstDayOfCurrentMonth())
+  const [rangeTo, setRangeTo] = useState(getLocalYYYYMMDD())
+  const [rangeLoading, setRangeLoading] = useState(false)
+  // { meeting_id, date, total, nuevos, rows: [{att_id, person_name, is_new}] }
+  const [rangeDays, setRangeDays] = useState([])
+  const [expandedMeetingId, setExpandedMeetingId] = useState(null)
 
   const today = useMemo(() => getLocalYYYYMMDD(), [])
 
@@ -205,7 +225,7 @@ export default function LeaderHome() {
 
   async function saveMeetingMeta(e) {
     e?.preventDefault?.()
-    setUiInfo('Guardando reunión...')
+    setMeetingMsg('Guardando reunión...')
     try {
       let currentMeeting = meeting
 
@@ -216,7 +236,7 @@ export default function LeaderHome() {
           .eq('group_id', group?.id)
           .eq('date', meta.date)
           .maybeSingle()
-        if (findErr) { console.error('FIND meeting err =>', findErr); setUiInfo('No se pudo consultar la reunión.'); return }
+        if (findErr) { console.error('FIND meeting err =>', findErr); setMeetingMsg('No se pudo consultar la reunión.'); return }
         if (existing) {
           currentMeeting = existing
           setMeeting(existing)
@@ -226,7 +246,7 @@ export default function LeaderHome() {
             .insert({ group_id: group?.id, date: meta.date })
             .select()
             .single()
-          if (createErr) { console.error('CREATE meeting err =>', createErr); setUiInfo('No se pudo crear la reunión.'); return }
+          if (createErr) { console.error('CREATE meeting err =>', createErr); setMeetingMsg('No se pudo crear la reunión.'); return }
           currentMeeting = created
           setMeeting(created)
         }
@@ -250,7 +270,7 @@ export default function LeaderHome() {
 
       if (error) {
         console.error('UPDATE meetings error =>', error)
-        setUiInfo('No se pudo guardar la reunión. Revisa la consola.')
+        setMeetingMsg('No se pudo guardar la reunión. Revisa la consola.')
         return
       }
 
@@ -275,10 +295,10 @@ export default function LeaderHome() {
           helper_name: updated.helper_name || ''
         }))
       }
-      setUiInfo('✅ Reunión guardada correctamente.')
+      setMeetingMsg('✅ Reunión guardada correctamente.')
     } catch (err) {
       console.error('UNCAUGHT saveMeetingMeta =>', err)
-      setUiInfo('Ocurrió un error inesperado al guardar.')
+      setMeetingMsg('Ocurrió un error inesperado al guardar.')
     }
   }
 
@@ -311,7 +331,35 @@ export default function LeaderHome() {
     setUiInfo('Eliminado.')
   }
 
-  // RPC para persona + membresía + asistencia
+  // Eliminar reunión (borra asistencia del día y luego la reunión)
+  async function deleteMeetingCascade(meetingId) {
+    if (!meetingId) return
+    if (!confirm('¿Eliminar la reunión completa y su asistencia? Esta acción no se puede deshacer.')) return
+    try {
+      // 1) borra asistencia del día
+      const { error: aErr } = await supabase.from('attendance').delete().eq('meeting_id', meetingId)
+      if (aErr) throw aErr
+      // 2) borra reunión
+      const { error: mErr } = await supabase.from('meetings').delete().eq('id', meetingId)
+      if (mErr) throw mErr
+
+      // si borramos la reunión actual, reseteamos panel del día
+      if (meeting?.id === meetingId) {
+        setMeeting(null)
+        setTodayAtt([])
+        setMeetingMsg('')
+      }
+
+      // refresca rango
+      await loadAttendanceRange()
+      setUiInfo('🗑️ Reunión eliminada.')
+    } catch (e) {
+      console.error('deleteMeetingCascade', e)
+      setUiInfo('No se pudo eliminar la reunión (revisa políticas RLS).')
+    }
+  }
+
+  // RPC persona + membresía + asistencia
   async function addVisitor(e) {
     e?.preventDefault?.()
     if (!meeting?.id || !group?.id) return
@@ -380,7 +428,7 @@ export default function LeaderHome() {
     return members.filter(p => (p.full_name || '').toLowerCase().includes(q))
   }, [members, search])
 
-  // ===== NUEVO: funciones Bethel =====
+  // ===== Bethel =====
   async function openBethelModal() {
     setBethelUi('')
     setProspects([])
@@ -389,7 +437,6 @@ export default function LeaderHome() {
     setProspectForm({ full_name: '', age: '', phone: '', address: '' })
     setBethelModalOpen(true)
 
-    // cargar lista de bethels
     const { data, error } = await supabase.from('bethels').select('id, name').order('name', { ascending: true })
     if (error) { console.error(error); setBethelUi('No se pudieron cargar los Bethels.'); return }
     setBethels(data || [])
@@ -436,30 +483,116 @@ export default function LeaderHome() {
     await loadProspects(selectedBethelId)
   }
 
-  // Reemplazo: usar RPC mark_bethel_attendance
-async function markBethelAttendance(p) {
-  if (!selectedBethelId) { setBethelUi('Selecciona un Bethel.'); return }
-  if (!p?.id) return
+  async function markBethelAttendance(p) {
+    if (!selectedBethelId) { setBethelUi('Selecciona un Bethel.'); return }
+    if (!p?.id) return
 
-  try {
-    const { error } = await supabase.rpc('mark_bethel_attendance', {
-      p_bethel_id: selectedBethelId,   // uuid del bethel
-      p_prospect_id: p.id,             // bigint del prospecto
-      p_date: bethelDate               // date (YYYY-MM-DD)
-    })
-
-    if (error) throw error
-
-    // La función hace ON CONFLICT DO NOTHING, así que aunque ya exista el registro, no truena.
-    setBethelUi(`🙌 Asistencia registrada para ${p.full_name}.`)
-    await loadProspects(selectedBethelId)
-  } catch (e) {
-    console.error(e)
-    // Como la RPC es atómica, si da error es algo real (RLS, tipos, etc.)
-    setBethelUi('No se pudo registrar la asistencia. Revisa políticas RLS y tipos.')
+    try {
+      const { error } = await supabase.rpc('mark_bethel_attendance', {
+        p_bethel_id: selectedBethelId,
+        p_prospect_id: p.id,
+        p_date: bethelDate
+      })
+      if (error) throw error
+      setBethelUi(`🙌 Asistencia registrada para ${p.full_name}.`)
+      await loadProspects(selectedBethelId)
+    } catch (e) {
+      console.error(e)
+      setBethelUi('No se pudo registrar la asistencia. Revisa políticas RLS y tipos.')
+    }
   }
-}
 
+  // ===== Rango: cargar por fecha (agrupado) =====
+  async function loadAttendanceRange() {
+    if (!group?.id) return
+    setRangeLoading(true)
+    try {
+      // 1) Reuniones del grupo en el rango
+      const { data: meetingsInRange, error: mErr } = await supabase
+        .from('meetings')
+        .select('id, date')
+        .eq('group_id', group.id)
+        .gte('date', rangeFrom)
+        .lte('date', rangeTo)
+        .order('date', { ascending: true })
+      if (mErr) throw mErr
+
+      if (!meetingsInRange || meetingsInRange.length === 0) {
+        setRangeDays([])
+        setExpandedMeetingId(null)
+        return
+      }
+      const meetingIds = meetingsInRange.map(m => m.id)
+      const dateByMeeting = new Map(meetingsInRange.map(m => [m.id, m.date]))
+
+      // 2) Asistencia con nombres
+      const { data: att, error: aErr } = await supabase
+        .from('attendance')
+        .select('id, meeting_id, is_new, person:people(id, full_name)')
+        .in('meeting_id', meetingIds)
+        .order('id', { ascending: true })
+      if (aErr) throw aErr
+
+      // 3) Agrupar por reunión
+      const bucket = new Map() // meeting_id -> { total, nuevos, rows: [] }
+      for (const a of (att || [])) {
+        const mid = a.meeting_id
+        if (!bucket.has(mid)) bucket.set(mid, { total: 0, nuevos: 0, rows: [] })
+        const b = bucket.get(mid)
+        b.total++
+        if (a.is_new) b.nuevos++
+        b.rows.push({
+          att_id: a.id,
+          person_name: a.person?.full_name || '—',
+          is_new: !!a.is_new,
+        })
+      }
+
+      const days = meetingsInRange.map(m => {
+        const rec = bucket.get(m.id) || { total: 0, nuevos: 0, rows: [] }
+        // ordenar nombres
+        rec.rows.sort((x, y) => x.person_name.localeCompare(y.person_name))
+        return {
+          meeting_id: m.id,
+          date: dateByMeeting.get(m.id) || m.date,
+          total: rec.total,
+          nuevos: rec.nuevos,
+          rows: rec.rows
+        }
+      })
+
+      setRangeDays(days)
+      if (!days.find(d => d.meeting_id === expandedMeetingId)) {
+        setExpandedMeetingId(null)
+      }
+    } catch (e) {
+      console.error('loadAttendanceRange', e)
+      setUiInfo('No se pudo cargar la asistencia por rango. Revisa la consola.')
+    } finally {
+      setRangeLoading(false)
+    }
+  }
+
+  // Acciones sobre filas del rango (modificación cross-fecha)
+  async function rangeToggleIsNew(attId, current) {
+    const { error } = await supabase.from('attendance').update({ is_new: !current }).eq('id', attId)
+    if (error) { console.error(error); setUiInfo('No se pudo actualizar.'); return }
+    await loadAttendanceRange()
+    setUiInfo('Actualizado.')
+  }
+  async function rangeDeleteAttendance(attId) {
+    if (!confirm('¿Eliminar esta marca de asistencia?')) return
+    const { error } = await supabase.from('attendance').delete().eq('id', attId)
+    if (error) { console.error(error); setUiInfo('No se pudo eliminar.'); return }
+    await loadAttendanceRange()
+    setUiInfo('Eliminado.')
+  }
+
+  // Carga automática del mes actual al tener grupo
+  useEffect(() => {
+    if (group?.id) loadAttendanceRange()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group?.id])
 
   return (
     <RequireAuth>
@@ -501,7 +634,7 @@ async function markBethelAttendance(p) {
           </div>
         </div>
 
-        {/* alerts */}
+        {/* alerts globales */}
         <div className="container">
           {msg && <div className="alert alert-rose">{msg}</div>}
           {uiInfo && <div className="alert alert-blue">{uiInfo}</div>}
@@ -587,6 +720,11 @@ async function markBethelAttendance(p) {
 
                   <div className="col-6">
                     <Button type="submit">Guardar reunión</Button>
+                    {meetingMsg && (
+                      <div className="mt-2 text-sm" style={{opacity:0.9}}>
+                        {meetingMsg}
+                      </div>
+                    )}
                   </div>
                 </form>
               </Card>
@@ -702,6 +840,138 @@ async function markBethelAttendance(p) {
                 )}
               </Card>
 
+              {/* ===== Rango de fechas: tabla "cool" con expandible ===== */}
+              <Card className="mt-6" title="Asistencia por rango de fechas" description="Selecciona el rango, luego haz clic en una fecha para ver o editar su asistencia.">
+                <div className="grid grid-6 gap-3">
+                  <div>
+                    <label className="label">Desde</label>
+                    <input type="date" className="input" value={rangeFrom} onChange={e=>setRangeFrom(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Hasta</label>
+                    <input type="date" className="input" value={rangeTo} onChange={e=>setRangeTo(e.target.value)} />
+                  </div>
+                  <div className="col-2 flex items-end">
+                    <Button onClick={loadAttendanceRange} disabled={rangeLoading}>
+                      {rangeLoading ? 'Buscando…' : 'Buscar'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 table-wrapper">
+                  {rangeLoading ? (
+                    <div className="skeleton">
+                      <div className="sk w66" />
+                      <div className="sk h10" />
+                      <div className="sk h10" />
+                    </div>
+                  ) : rangeDays.length === 0 ? (
+                    <p className="muted">Sin resultados. Elige un rango y presiona “Buscar”.</p>
+                  ) : (
+                    <div className="table table-cool">
+                      <div className="table-row table-head sticky">
+                        <div className="table-col w-40">Fecha</div>
+                        <div className="table-col w-20">Presentes</div>
+                        <div className="table-col w-20">Nuevos</div>
+                        <div className="table-col w-20">Acciones</div>
+                      </div>
+
+                      {rangeDays.map(d => {
+                        const isOpen = expandedMeetingId === d.meeting_id
+                        return (
+                          <div key={d.meeting_id} className={`table-group ${isOpen ? 'open' : ''}`}>
+                            {/* Fila principal (fecha) */}
+                            <div
+                              className={`table-row hoverable`}
+                              onClick={() => setExpandedMeetingId(isOpen ? null : d.meeting_id)}
+                              role="button"
+                              aria-expanded={isOpen}
+                              tabIndex={0}
+                              onKeyDown={(e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); setExpandedMeetingId(isOpen?null:d.meeting_id)} }}
+                            >
+                              <div className="table-col w-40">
+                                <Caret open={isOpen} /> <strong>{d.date}</strong>
+                              </div>
+                              <div className="table-col w-20">
+                                <Badge color="blue">{d.total}</Badge>
+                              </div>
+                              <div className="table-col w-20">
+                                {d.nuevos ? <Badge color="green">{d.nuevos}</Badge> : <Badge>0</Badge>}
+                              </div>
+                              <div className="table-col w-20 actions" onClick={e=>e.stopPropagation()}>
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => setExpandedMeetingId(isOpen ? null : d.meeting_id)}
+                                >
+                                  {isOpen ? 'Ocultar' : 'Ver asistencia'}
+                                </Button>
+                                <Button
+                                  variant="danger"
+                                  onClick={() => deleteMeetingCascade(d.meeting_id)}
+                                >
+                                  Eliminar reunión
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Panel expandible */}
+                            {isOpen && (
+                              <div className="table-subrow">
+                                <div className="subrow-head">
+                                  <div>
+                                    <strong>Asistencia total del día seleccionado:</strong>{' '}
+                                    {d.total} {d.total === 1 ? 'persona' : 'personas'}
+                                    {d.nuevos ? ` — Nuevos: ${d.nuevos}` : ''}
+                                  </div>
+                                  <div className="subrow-actions">
+                                    <Button variant="danger" onClick={() => deleteMeetingCascade(d.meeting_id)}>
+                                      Eliminar reunión
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Subtabla de asistentes */}
+                                <div className="table compact">
+                                  <div className="table-row table-head">
+                                    <div className="table-col">Nombre</div>
+                                    <div className="table-col w-20">Nuevo</div>
+                                    <div className="table-col w-30">Acciones</div>
+                                  </div>
+                                  {d.rows.length === 0 ? (
+                                    <div className="table-row">
+                                      <div className="table-col col-6">
+                                        <span className="muted">No hay asistentes en esta reunión.</span>
+                                      </div>
+                                    </div>
+                                  ) : d.rows.map(r => (
+                                    <div key={r.att_id} className="table-row hoverable">
+                                      <div className="table-col">{r.person_name}</div>
+                                      <div className="table-col w-20">
+                                        {r.is_new ? <Badge color="green">Sí</Badge> : <Badge>—</Badge>}
+                                      </div>
+                                      <div className="table-col w-30">
+                                        <div className="row gap-2">
+                                          <Button variant="ghost" onClick={()=>rangeToggleIsNew(r.att_id, r.is_new)}>
+                                            {r.is_new ? 'Marcar recurrente' : 'Marcar nuevo'}
+                                          </Button>
+                                          <Button variant="danger" onClick={()=>rangeDeleteAttendance(r.att_id)}>
+                                            Eliminar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </Card>
+
               {/* Modal editar persona */}
               {editingPerson && (
                 <div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -736,7 +1006,7 @@ async function markBethelAttendance(p) {
                 </div>
               )}
 
-              {/* ===== NUEVO: Modal Asistencia Bethel ===== */}
+              {/* Modal Asistencia Bethel */}
               {bethelModalOpen && (
                 <div className="modal-backdrop" role="dialog" aria-modal="true">
                   <div className="modal modal-lg">
@@ -744,8 +1014,8 @@ async function markBethelAttendance(p) {
                       <h3 className="card-title">Asistencia al Bethel</h3>
                     </div>
                     <div className="card-body">
-                      <div className="grid grid-6 gap-3">
-                        <div className="col-3">
+                      <div className="grid grid-50 gap-3">
+                        <div className="col-12">
                           <label className="label">Bethel</label>
                           <select className="input"
                                   value={selectedBethelId}
@@ -760,18 +1030,18 @@ async function markBethelAttendance(p) {
                           <label className="label">Fecha</label>
                           <input type="date" className="input" value={bethelDate} onChange={e=>setBethelDate(e.target.value)} />
                         </div>
-                        <div className="col-6">
+                        <div className="col-12">
                           {bethelUi && <div className="alert alert-blue">{bethelUi}</div>}
                         </div>
                       </div>
 
-                      <div className="split-grid mt-4">
+                      <div className="split-grid mt-6">
                         <Card title="Registrar prospecto" description="Se guardará con estado 'prospecto'.">
                           <form onSubmit={addProspect} className="grid gap-3">
                             <input className="input" placeholder="Nombre completo *"
                                    value={prospectForm.full_name}
                                    onChange={e=>setProspectForm(f=>({...f, full_name: e.target.value}))} required />
-                            <div className="grid grid-3 gap-3">
+                            <div className="grid grid-4 gap-4">
                               <input className="input" placeholder="Edad" inputMode="numeric"
                                      value={prospectForm.age}
                                      onChange={e=>setProspectForm(f=>({...f, age: e.target.value.replace(/\D/g,'')}))}/>
@@ -782,12 +1052,9 @@ async function markBethelAttendance(p) {
                                      value={prospectForm.address}
                                      onChange={e=>setProspectForm(f=>({...f, address: e.target.value}))}/>
                             </div>
-                            <div className="row gap-2">
+                            <div className="row gap-12">
                               <Button type="submit" variant="success">Guardar prospecto</Button>
-                              <Button type="button" variant="secondary"
-                                onClick={()=>setProspectForm({ full_name:'', age:'', phone:'', address:'' })}>
-                                Limpiar
-                              </Button>
+                             
                             </div>
                           </form>
                         </Card>
@@ -804,19 +1071,19 @@ async function markBethelAttendance(p) {
                                   <div className="list-col">
                                     <div className="list-title">{p.full_name}</div>
                                     <div className="list-meta">
-                                      {typeof p.age === 'number' && <Badge>{p.age} años</Badge>}
+                                      {typeof p.age === 'number' && <Badge>{p.full_name} años</Badge>}
+                                       {p.age && <span>{p.age}</span>}
                                       {p.phone && <span>{p.phone}</span>}
                                       {p.address && <span>{p.address}</span>}
                                       <Badge color={p.status === 'asistio' ? 'green' : 'amber'}>
                                         {p.status}
                                       </Badge>
-                                    </div>
-                                  </div>
-                                  <div className="row gap-2">
-                                    <Button variant="success" onClick={() => markBethelAttendance(p)}>
+                                       <Button variant="success" onClick={() => markBethelAttendance(p)}>
                                       Marcar asistencia
                                     </Button>
+                                    </div>
                                   </div>
+                                  <Anen1428@</Anen1428>
                                 </li>
                               ))}
                             </ul>
@@ -830,7 +1097,7 @@ async function markBethelAttendance(p) {
                   </div>
                 </div>
               )}
-              {/* ===== FIN MODAL ===== */}
+              {/* FIN MODAL */}
             </>
           )}
         </div>
