@@ -331,3 +331,63 @@ body{margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto
                           minmax(200px, 1fr);     /* Acciones */
   }
 }
+/* --- Modal con scroll interno --- */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.18);
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;            /* clave: altura máx del modal */
+  outline: none;
+}
+
+.modal-lg { max-width: 1100px; }
+
+/* Head con botón cerrar arriba */
+.modal-head {
+  position: sticky;            /* se mantiene visible si haces scroll */
+  top: 0;
+  background: #fff;
+  z-index: 1;
+  padding-right: 56px;         /* deja espacio para la X */
+}
+
+/* Botón X arriba-derecha */
+.modal-close {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  line-height: 1;
+  font-size: 18px;
+}
+
+/* Cuerpo que scrollea */
+.modal-body-scroll {
+  overflow: auto;              /* clave: scroll interno */
+  padding-right: 8px;          /* pequeño respiro para scrollbar */
+}
+
+/* Pie opcional fijo al fondo */
+.modal-foot {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+}
+
+/* Mejoras responsivas */
+@media (max-width: 640px) {
+  .modal { max-height: 92vh; }
+  .modal-close { top: 8px; right: 8px; }
+}

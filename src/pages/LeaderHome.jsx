@@ -1006,98 +1006,138 @@ export default function LeaderHome() {
                 </div>
               )}
 
-              {/* Modal Asistencia Bethel */}
-              {bethelModalOpen && (
-                <div className="modal-backdrop" role="dialog" aria-modal="true">
-                  <div className="modal modal-lg">
-                    <div className="card-head">
-                      <h3 className="card-title">Asistencia al Bethel</h3>
-                    </div>
-                    <div className="card-body">
-                      <div className="grid grid-50 gap-3">
-                        <div className="col-12">
-                          <label className="label">Bethel</label>
-                          <select className="input"
-                                  value={selectedBethelId}
-                                  onChange={handleSelectBethel}>
-                            <option value="">-- Selecciona --</option>
-                            {bethels.map(b => (
-                              <option key={b.id} value={b.id}>{b.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="label">Fecha</label>
-                          <input type="date" className="input" value={bethelDate} onChange={e=>setBethelDate(e.target.value)} />
-                        </div>
-                        <div className="col-12">
-                          {bethelUi && <div className="alert alert-blue">{bethelUi}</div>}
-                        </div>
-                      </div>
+             {/* Modal Asistencia Bethel */}
+{bethelModalOpen && (
+  <div
+    className="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    onClick={() => setBethelModalOpen(false)} // click fuera cierra
+    onKeyDown={(e) => { if (e.key === 'Escape') setBethelModalOpen(false) }} // ESC cierra
+    tabIndex={-1}
+  >
+    <div
+      className="modal modal-lg modal-scroll"
+      onClick={(e) => e.stopPropagation()} // evita cerrar al hacer clic dentro
+    >
+      <div className="card-foot row end gap-2 modal-foot">
+        <Button variant="secondary" onClick={()=>setBethelModalOpen(false)}>Cerrar</Button>
+      </div>
+      <div className="card-head modal-head">
+        <h3 className="card-title">Asistencia al Bethel</h3>
 
-                      <div className="split-grid mt-6">
-                        <Card title="Registrar prospecto" description="Se guardará con estado 'prospecto'.">
-                          <form onSubmit={addProspect} className="grid gap-3">
-                            <input className="input" placeholder="Nombre completo *"
-                                   value={prospectForm.full_name}
-                                   onChange={e=>setProspectForm(f=>({...f, full_name: e.target.value}))} required />
-                            <div className="grid grid-4 gap-4">
-                              <input className="input" placeholder="Edad" inputMode="numeric"
-                                     value={prospectForm.age}
-                                     onChange={e=>setProspectForm(f=>({...f, age: e.target.value.replace(/\D/g,'')}))}/>
-                              <input className="input" placeholder="Teléfono"
-                                     value={prospectForm.phone}
-                                     onChange={e=>setProspectForm(f=>({...f, phone: e.target.value}))}/>
-                              <input className="input" placeholder="Dirección"
-                                     value={prospectForm.address}
-                                     onChange={e=>setProspectForm(f=>({...f, address: e.target.value}))}/>
-                            </div>
-                            <div className="row gap-12">
-                              <Button type="submit" variant="success">Guardar prospecto</Button>
-                             
-                            </div>
-                          </form>
-                        </Card>
+        {/* Botón cerrar arriba */}
+        <button
+          className="btn btn-ghost modal-close"
+          aria-label="Cerrar"
+          onClick={() => setBethelModalOpen(false)}
+          type="button"
+        >
+          ✕
+        </button>
+      </div>
 
-                        <Card title="Prospectos" description="Marca asistencia para los que asistieron.">
-                          {!selectedBethelId ? (
-                            <p className="muted">Selecciona un Bethel para ver la lista.</p>
-                          ) : prospects.length === 0 ? (
-                            <p className="muted">No hay prospectos registrados aún.</p>
-                          ) : (
-                            <ul className="list">
-                              {prospects.map(p => (
-                                <li key={p.id} className="list-row">
-                                  <div className="list-col">
-                                    <div className="list-title">{p.full_name}</div>
-                                    <div className="list-meta">
-                                      {typeof p.age === 'number' && <Badge>{p.full_name} años</Badge>}
-                                       {p.age && <span>{p.age}</span>}
-                                      {p.phone && <span>{p.phone}</span>}
-                                      {p.address && <span>{p.address}</span>}
-                                      <Badge color={p.status === 'asistio' ? 'green' : 'amber'}>
-                                        {p.status}
-                                      </Badge>
-                                       <Button variant="success" onClick={() => markBethelAttendance(p)}>
-                                      Marcar asistencia
-                                    </Button>
-                                    </div>
-                                  </div>
-                                  
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </Card>
+      {/* Cuerpo con scroll interno */}
+      <div className="card-body modal-body-scroll">
+        <div className="grid grid-50 gap-3">
+          <div className="col-12">
+            <label className="label">Bethel</label>
+            <select className="input" value={selectedBethelId} onChange={handleSelectBethel}>
+              <option value="">-- Selecciona --</option>
+              {bethels.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Fecha</label>
+            <input
+              type="date"
+              className="input"
+              value={bethelDate}
+              onChange={e=>setBethelDate(e.target.value)}
+            />
+          </div>
+          <div className="col-12">
+            {bethelUi && <div className="alert alert-blue">{bethelUi}</div>}
+          </div>
+        </div>
+
+        <div className="split-grid mt-6">
+          <Card title="Registrar prospecto" description="Se guardará con estado 'prospecto'.">
+            <form onSubmit={addProspect} className="grid gap-3">
+              <input
+                className="input"
+                placeholder="Nombre completo *"
+                value={prospectForm.full_name}
+                onChange={e=>setProspectForm(f=>({...f, full_name: e.target.value}))}
+                required
+              />
+              <div className="grid grid-4 gap-4">
+                <input
+                  className="input"
+                  placeholder="Edad"
+                  inputMode="numeric"
+                  value={prospectForm.age}
+                  onChange={e=>setProspectForm(f=>({...f, age: e.target.value.replace(/\D/g,'')}))}
+                />
+                <input
+                  className="input"
+                  placeholder="Teléfono"
+                  value={prospectForm.phone}
+                  onChange={e=>setProspectForm(f=>({...f, phone: e.target.value}))}
+                />
+                <input
+                  className="input"
+                  placeholder="Dirección"
+                  value={prospectForm.address}
+                  onChange={e=>setProspectForm(f=>({...f, address: e.target.value}))}
+                />
+              </div>
+              <div className="row gap-12">
+                <Button type="submit" variant="success">Guardar prospecto</Button>
+              </div>
+            </form>
+          </Card>
+
+          <Card title="Prospectos" description="Marca asistencia para los que asistieron.">
+            {!selectedBethelId ? (
+              <p className="muted">Selecciona un Bethel para ver la lista.</p>
+            ) : prospects.length === 0 ? (
+              <p className="muted">No hay prospectos registrados aún.</p>
+            ) : (
+              <ul className="list">
+                {prospects.map(p => (
+                  <li key={p.id} className="list-row">
+                    <div className="list-col">
+                      <div className="list-title">{p.full_name}</div>
+                      <div className="list-meta">
+                        {typeof p.age === 'number' && <Badge>{p.age} años</Badge>}
+                        {p.phone && <span>{p.phone}</span>}
+                        {p.address && <span>{p.address}</span>}
+                        <Badge color={p.status === 'asistio' ? 'green' : 'amber'}>
+                          {p.status}
+                        </Badge>
                       </div>
                     </div>
-                    <div className="card-foot row end gap-2">
-                      <Button variant="secondary" onClick={()=>setBethelModalOpen(false)}>Cerrar</Button>
+                    <div className="row gap-2">
+                      <Button variant="success" onClick={() => markBethelAttendance(p)}>
+                        Marcar asistencia
+                      </Button>
                     </div>
-                  </div>
-                </div>
-              )}
-              {/* FIN MODAL */}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+      </div>
+
+      {/* Pie fijo opcional (sigue visible) */}
+      
+    </div>
+  </div>
+)}
             </>
           )}
         </div>
