@@ -1024,7 +1024,7 @@ export default function LeaderHome() {
         <Button variant="secondary" onClick={()=>setBethelModalOpen(false)}>Cerrar</Button>
       </div>
       <div className="card-head modal-head">
-        <h3 className="card-title">Asistencia al Bethel</h3>
+        <h3 className="card-title">Registrar Asistencia al Bethel</h3>
 
         {/* Botón cerrar arriba */}
         <button
